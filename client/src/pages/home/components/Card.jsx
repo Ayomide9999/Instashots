@@ -14,6 +14,8 @@ import { createComment, getComments } from "../../../api/comment";
 import useFetch from "../../../hooks/useFetch";
 import useVideoControl from "../../../hooks/useVideoControl";
 
+
+
 export default function Card({ post }) {
   const { currentImageIndex, handlePrevious, handleNext } = useSlideControl(
     post?.media
@@ -32,7 +34,7 @@ export default function Card({ post }) {
   );
   const [likeCount, setLikeCount] = useState(post?.likes?.length || 0);
   const navigate = useNavigate();
-  const { videoRef, isPlaying, handlePlayPause } = useVideoControl()
+  const { videoRef, isPlaying, handlePlayPause } = useVideoControl();
   const {
     register,
     handleSubmit,
@@ -160,13 +162,11 @@ export default function Card({ post }) {
                           onClick={handlePlayPause}
                           classname="absolute top-1/2 left-[45%] btn btn-circle btn-ghost hover: bg-transparent opacity-75 hover:opacity-100 text-white border-0"
                         >
-                      { isPlaying ? (
-                      <i className="ri-pause-line text-6xl"></i>
-                      )(
-                         <i className="ri-play-line text-6xl"></i>
-                      )
-                     
-                    }
+                          {isPlaying ? (
+                            <i className="ri-pause-line text-6xl"></i>
+                          ) : (
+                            <i className="ri-play-line text-6xl"></i>
+                          )}
                         </button>
                       </>
                     ) : (
