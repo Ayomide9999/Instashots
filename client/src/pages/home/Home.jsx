@@ -19,7 +19,12 @@ export default function Home() {
   });
   const [active, setActive] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
-  
+  const [loadingMorePosts, setLoadinMorePost] = useState(false);
+  const [allPosts, setAllPosts] = useState(posts || []);
+  const lastPostRef = useInfiniteScroll({
+    loading: loadingMorePosts,
+    hasMore: postsData?.
+  });
   const toggleFollowUser = async (followerId) => {
     setFollowLoading(true);
     try {
@@ -52,9 +57,22 @@ export default function Home() {
                 <div className="w-full md:max-w-[450px] 2xl:max-w-[600px] mx-auto">
                   {posts?.length > 0 ? (
                     <Suspense fallback={<Skeleton />}>
-                      {posts?.map((post) => (
-                        <Card key={post._id} post={post} />
-                      ))}
+                      {allPosts?.map((post, index) => {
+                        const isLast = index === allPosts.length - 1;
+                        return (
+                          <div
+                            ref={isLast ? lastPostRef : undefined}
+                            key={post._id}
+                          >
+                            <Card post={post} />
+                          </div>
+                        );
+                      })}
+                      {loadingMorePosts && (
+                        <div className="flex justify-center my-4">
+                          <span className="loading loading-spinner loading-md text-secondary"></span>
+                        </div>
+                      )}
                     </Suspense>
                   ) : (
                     <p className="my-8 text-center text-lg font-bold">
@@ -62,6 +80,9 @@ export default function Home() {
                     </p>
                   )}
                 </div>
+              )}
+              {error && (
+                <span className="text-center text-red-500 my-4">{error}</span>
               )}
             </div>
           </div>
