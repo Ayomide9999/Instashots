@@ -2,16 +2,18 @@ import { useAuth, usePosts } from "../../store";
 import MetaArgs from "../../components/MetaArgs";
 import Container from "../../components/Container";
 import Skeleton from "../../components/Skeleton";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { followUser, getRandomUsers } from "../../api/auth";
 import useFetch from "../../hooks/useFetch";
 import { toast } from "sonner";
 import handleError from "../../utils/handleError";
+import useInfiniteScroll from "../../hooks/useInfinteScroll";
+
 const Card = lazy(() => import("./components/Card"));
 
 export default function Home() {
-  const { posts, loading } = usePosts();
+  const { posts, loading,setPage,data: postsData, page, error } = usePosts();
   const { user, handleLogout, accessToken, setUser } = useAuth();
   const { data } = useFetch({
     apiCall: getRandomUsers,
@@ -23,8 +25,33 @@ export default function Home() {
   const [allPosts, setAllPosts] = useState(posts || []);
   const lastPostRef = useInfiniteScroll({
     loading: loadingMorePosts,
-    hasMore: postsData?.
+    hasMore: postsData?.pagination?.hasMore,
+    setPage: (pageUpdater) => {
+      setLoadinMorePost(true);
+      setPage((prev) => {
+        const next =
+          typeof pageUpdater === "function" ? pageUpdater(prev) : pageUpdater;
+      });
+    },
   });
+  useEffect(() => {
+    if (!loading) setLoadinMorePost(false);
+  }, [allPosts, loading]);
+  useEffect(() => {
+    if (!postsData?.posts) return;
+
+    if (page === 1) {
+      setAllPosts(postsData.posts);
+    } else {
+      setAllPosts((prev) => {
+        const existingPostIds = new Set(prev.map((post) => post._id));
+        const postsToAdd = postsData.posts.filter(
+          (post) => !existingPostIds.has(post._id)
+        );
+        return [...prev, ...postsToAdd];
+      });
+    }
+  }, [postsData?.posts, page]);
   const toggleFollowUser = async (followerId) => {
     setFollowLoading(true);
     try {
