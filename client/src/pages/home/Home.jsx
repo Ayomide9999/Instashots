@@ -2,16 +2,18 @@ import { useAuth, usePosts } from "../../store";
 import MetaArgs from "../../components/MetaArgs";
 import Container from "../../components/Container";
 import Skeleton from "../../components/Skeleton";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { followUser, getRandomUsers } from "../../api/auth";
 import useFetch from "../../hooks/useFetch";
 import { toast } from "sonner";
 import handleError from "../../utils/handleError";
+import useInfiniteScroll from "../../hooks/useInfinteScroll";
+
 const Card = lazy(() => import("./components/Card"));
 
 export default function Home() {
-  const { posts, loading } = usePosts();
+  const { posts, loading,setPage,data: postsData, page, error } = usePosts();
   const { user, handleLogout, accessToken, setUser } = useAuth();
   const { data } = useFetch({
     apiCall: getRandomUsers,
@@ -19,7 +21,37 @@ export default function Home() {
   });
   const [active, setActive] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
-  
+  const [loadingMorePosts, setLoadinMorePost] = useState(false);
+  const [allPosts, setAllPosts] = useState(posts || []);
+  const lastPostRef = useInfiniteScroll({
+    loading: loadingMorePosts,
+    hasMore: postsData?.pagination?.hasMore,
+    setPage: (pageUpdater) => {
+      setLoadinMorePost(true);
+      setPage((prev) => {
+        const next =
+          typeof pageUpdater === "function" ? pageUpdater(prev) : pageUpdater;
+      });
+    },
+  });
+  useEffect(() => {
+    if (!loading) setLoadinMorePost(false);
+  }, [allPosts, loading]);
+  useEffect(() => {
+    if (!postsData?.posts) return;
+
+    if (page === 1) {
+      setAllPosts(postsData.posts);
+    } else {
+      setAllPosts((prev) => {
+        const existingPostIds = new Set(prev.map((post) => post._id));
+        const postsToAdd = postsData.posts.filter(
+          (post) => !existingPostIds.has(post._id)
+        );
+        return [...prev, ...postsToAdd];
+      });
+    }
+  }, [postsData?.posts, page]);
   const toggleFollowUser = async (followerId) => {
     setFollowLoading(true);
     try {
@@ -52,9 +84,22 @@ export default function Home() {
                 <div className="w-full md:max-w-[450px] 2xl:max-w-[600px] mx-auto">
                   {posts?.length > 0 ? (
                     <Suspense fallback={<Skeleton />}>
-                      {posts?.map((post) => (
-                        <Card key={post._id} post={post} />
-                      ))}
+                      {allPosts?.map((post, index) => {
+                        const isLast = index === allPosts.length - 1;
+                        return (
+                          <div
+                            ref={isLast ? lastPostRef : undefined}
+                            key={post._id}
+                          >
+                            <Card post={post} />
+                          </div>
+                        );
+                      })}
+                      {loadingMorePosts && (
+                        <div className="flex justify-center my-4">
+                          <span className="loading loading-spinner loading-md text-secondary"></span>
+                        </div>
+                      )}
                     </Suspense>
                   ) : (
                     <p className="my-8 text-center text-lg font-bold">
@@ -62,6 +107,9 @@ export default function Home() {
                     </p>
                   )}
                 </div>
+              )}
+              {error && (
+                <span className="text-center text-red-500 my-4">{error}</span>
               )}
             </div>
           </div>
